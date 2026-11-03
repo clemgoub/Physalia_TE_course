@@ -9,6 +9,11 @@ Handouts for the practicals of the Physalia course on transposable elements.
 
 Practical 4 (TEtranscripts) will go in `Practical4/`.
 
+## Handouts to open in a browser
+
+- Practical 3, student handout: https://clemgoub.github.io/Physalia_TE_course/Practical3/Practical3_GraffiTE_v1.1.html
+- Practical 3, instructor run sheet: https://clemgoub.github.io/Physalia_TE_course/Practical3/INSTRUCTOR_practical3.html
+
 ## The course server
 
 The commands in the handouts run on the course server, where the software and the data are
