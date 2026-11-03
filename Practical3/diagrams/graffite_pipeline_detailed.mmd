@@ -1,0 +1,64 @@
+flowchart TB
+  subgraph S1 ["Step 1: find the structural variants (SVs)"]
+    asm(["--assemblies<br/>genome assemblies"]):::input
+    lr(["--longreads<br/>long reads"]):::off
+    bams(["--bams<br/>aligned long reads"]):::off
+    pavin(["--pav<br/>assemblies, PAV caller"]):::off
+    own(["--svs or --vcf<br/>your own SV calls"]):::off
+    ma["map_asm<br/>minimap2: align each assembly"]:::used
+    sv["svim_asm<br/>svim-asm: call INS and DEL"]:::used
+    ml["map_longreads<br/>minimap2"]:::off
+    sn["sniffles_sample_call,<br/>sniffles_population_call"]:::off
+    pav["pav_asm"]:::off
+    tm["truvari_merge<br/>merge all calls: SVs.vcf"]:::used
+    asm --> ma --> sv --> tm
+    lr --> ml --> sn --> tm
+    bams --> sn
+    pavin --> pav --> tm
+    own --> tm
+  end
+
+  subgraph S2 ["Steps 2 and 3: annotate the TEs"]
+    rmdir(["--RM_dir<br/>restart after RepeatMasker"]):::off
+    rm["split_repeatmask, repeatmask_VCF<br/>RepeatMasker + ULTRA"]:::used
+    tsd["tsd_prep, tsd_search, tsd_report<br/>TSD search"]:::used
+    cr["concat_repeatmask<br/>pangenome.vcf + one subset"]:::used
+    trusted["trusted subset<br/>default, any species"]:::off
+    human["human subset, --human<br/>+ hervk_annotate"]:::used
+    rm --> tsd --> cr
+    rmdir -.-> tsd
+    cr -.-> trusted
+    cr --> human
+  end
+
+  subgraph S3 ["Step 4: genotype the candidates"]
+    gvcf(["--graffite_vcf<br/>restart from a pangenome.vcf"]):::off
+    reads(["--genotype_with<br/>short or long reads"]):::input
+    pg["pangenie_index, pangenie<br/>--graph_method pangenie (default)"]:::off
+    mg["make_graph<br/>vg construct + vg autoindex"]:::used
+    gar["graph_align_reads<br/>Giraffe (--graph_method giraffe)<br/>or GraphAligner (graphaligner)"]:::used
+    vc["vg_call<br/>vg call: genotype"]:::used
+    mv["merge_VCFs<br/>GraffiTE.merged.genotypes.vcf.gz"]:::used
+    ga["genotyping_audit"]:::used
+    tg["trusted_genotypes<br/>default"]:::off
+    hr["hervk_reconcile<br/>--human"]:::used
+    mg --> gar --> vc --> mv
+    pg -.-> mv
+    reads --> gar
+    reads -.-> pg
+    gvcf -.-> mg
+    mv --> ga
+    mv -.-> tg
+    mv --> hr
+  end
+
+  epi["methylation on the graph<br/>--epigenomes (panmethyl)"]:::off
+
+  tm -->|"SVs.vcf"| rm
+  cr -->|"pangenome.vcf"| mg
+  cr -.-> pg
+  vc -.-> epi
+
+  classDef used fill:#9fdccf,stroke:#1f7a6f,stroke-width:2px,color:#000000
+  classDef input fill:#0b84d8,stroke:#0b5a94,color:#ffffff
+  classDef off fill:#f6f8fa,stroke:#9aa3ad,stroke-dasharray:4 3,color:#6e7781

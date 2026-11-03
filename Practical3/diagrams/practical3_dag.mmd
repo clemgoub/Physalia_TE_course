@@ -1,0 +1,38 @@
+flowchart TD
+  ref["Reference genome<br/>CHM13, chromosome 22"]:::input
+  asm["Genome assemblies of one person, HG002<br/>maternal and paternal copies of chromosome 22"]:::input
+  lib["Library of known TEs<br/>Dfam, human"]:::input
+  reads["Short reads from the same person<br/>Illumina"]:::input
+
+  subgraph run ["One GraffiTE command"]
+    s1["Step 1. Compare each assembly to the reference<br/>and list the insertions and deletions"]
+    s2["Step 2. Keep the ones made of TE sequence"]
+    s3["Step 3. Look for signs of a real transposition<br/>target site duplication, polyA tail"]
+    s4["Step 4. Genotype each candidate:<br/>build a graph genome with a TE path and a no-TE path,<br/>align the reads, count the reads on each path"]
+  end
+
+  all[("All candidates, genotyped<br/>VCF + presence/absence table")]:::output
+
+  subgraph subsets ["Keep the candidates you can trust"]
+    any["Any species: trusted subset<br/>one TE, at least 250 bp, not mostly tandem repeats"]
+    hum["Human only, with --human:<br/>the families still active in humans<br/>Alu, L1, SVA, HERV-K"]
+  end
+
+  you["Your turn: count the TEs<br/>of each superfamily"]:::student
+
+  ref --> s1
+  asm --> s1
+  s1 --> s2
+  lib --> s2
+  s2 --> s3
+  s3 --> s4
+  reads --> s4
+  s4 --> all
+  all --> any
+  all --> hum
+  any --> you
+  hum --> you
+
+  classDef input fill:#0b84d8,stroke:#0b5a94,color:#ffffff
+  classDef output fill:#f0a500,stroke:#a87300,color:#000000
+  classDef student fill:#5ac85a,stroke:#2f8a2f,color:#000000
