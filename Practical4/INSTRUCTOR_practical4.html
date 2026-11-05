@@ -2223,11 +2223,10 @@ Expecting `+Qe.join(", ")+", got '"+(this.terminals_[Ne]||Ne)+"'":Dt="Parse erro
 (TEtranscripts): instructor run sheet</h1>
 <p>The commands to type live, in order. They are the commands of the
 student handout, <code>Practical4_TEtranscripts.md</code>.</p>
-<!-- TODO(server, 5 Nov): the times below come from the test account tetest on the earlier m4.xlarge (4 CPUs, 15.6 GB), with STAR building its own index and the alignments run with --sjdbGTFfile. Replace them with times measured on the m4.4xlarge with the shared index. -->
-
-<p>We measured the times as the test account <code>tetest</code>, one
-run at a time. We have not measured a run with 20 students at once;
-expect it to be slower.</p>
+<p>We measured the times on 5 November 2026 as the test account
+<code>tetest</code> on the course server (16 CPUs, 62 GB of memory), one
+run at a time. The steps we timed add up to about 6 minutes. We have not
+measured a run with 20 students at once; expect it to be slower.</p>
 <h2 id="before-the-class">Before the class</h2>
 <ul>
 <li>Get the server&#39;s address for the day (it changes every
@@ -2236,9 +2235,11 @@ session).</li>
 <code>VolcanoPiwi.R</code> and the shared STAR index are in
 <code>/data/practical4_tetranscripts</code>, read-only for
 students.</li>
-<li>Students do not build the STAR index. Building it took 395 s and 5.5
-GB of memory; 20 builds at once would need about 110 GB, and the server
-has 62 GB.</li>
+<li>Students do not build the STAR index. With the handout&#39;s command (2
+threads), building it took 395 s and 5.5 GB of memory on the m4.xlarge
+we tested on earlier (4 CPUs, 15.6 GB). 20 builds at once would need
+about 110 GB, and the server has 62 GB. We built the shared index in 92
+s with 8 threads; it used 5.2 GB.</li>
 </ul>
 <h2 id="1-set-up-under-1-minute">1. Set up (under 1 minute)</h2>
 <pre><code>ssh -i &lt;KEY&gt;.pem ubuntu@&lt;SERVER_IP&gt;</code></pre>
@@ -2253,25 +2254,63 @@ tree input_data/
 ln -s /data/practical4_tetranscripts/Index/ Index</code></pre>
 <p>Show the index command from step 1.1 of the handout, but do not run
 it.</p>
-<h2 id="2-star-alignments-about-1-minute-each-4-minutes-in-all">2. STAR
-alignments (about 1 minute each, 4 minutes in all)</h2>
+<h2 id="2-star-alignments-about-30-seconds-each-2-minutes-in-all">2.
+STAR alignments (about 30 seconds each, 2 minutes in all)</h2>
 <pre><code>mkdir STARalignments
 STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Piwi_GKD_rep_1.fastq.gz --readFilesCommand zcat --outSAMtype BAM Unsorted --winAnchorMultimapNmax 200 --outFilterMultimapNmax 100 --outFileNamePrefix STARalignments/piwiKD1_
 STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Piwi_GKD_rep_2.fastq.gz --readFilesCommand zcat --outSAMtype BAM Unsorted --winAnchorMultimapNmax 200 --outFilterMultimapNmax 100 --outFileNamePrefix STARalignments/piwiKD2_
 STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Control_rep_1.fastq.gz --readFilesCommand zcat --outSAMtype BAM Unsorted --winAnchorMultimapNmax 200 --outFilterMultimapNmax 100 --outFileNamePrefix STARalignments/piwiCT1_
 STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Control_rep_2.fastq.gz --readFilesCommand zcat --outSAMtype BAM Unsorted --winAnchorMultimapNmax 200 --outFilterMultimapNmax 100 --outFileNamePrefix STARalignments/piwiCT2_</code></pre>
-<p>Each alignment took about 50 s and 3.7 GB of memory with the 2023
-commands, which passed <code>--sjdbGTFfile</code> and used the account&#39;s
-own index. At 3.7 GB each, 20 students aligning at the same moment would
-need about 74 GB.
-<!-- TODO(server, 5 Nov): peak memory without --sjdbGTFfile, with the shared index --></p>
+<p>Each alignment took 27 to 29 s and 2.3 GB of memory. At 2.3 GB each,
+20 students aligning at the same moment would need about 45 GB (not
+measured).</p>
+<p>The 2023 commands also passed <code>--sjdbGTFfile</code> and
+<code>--sjdbOverhang</code> to each alignment. The shared index already
+holds the junctions from the GTF. We aligned <code>Piwi_GKD_rep_1</code>
+with and without these two options and got the same SAM records and the
+same <code>Log.final.out</code> statistics; with them, the alignment
+took 37 s and 3.7 GB instead of 29 s and 2.3 GB.</p>
 <p>To see how many reads mapped once or to several places:</p>
 <pre><code>grep -E &#39;Uniquely mapped reads %|% of reads mapped to multiple loci&#39; STARalignments/*_Log.final.out</code></pre>
-<h2 id="3-tetranscripts-about-6-minutes">3. TEtranscripts (about 6
+<p>On 5 November, the percentages were:</p>
+<table>
+<thead>
+<tr>
+<th>Sample</th>
+<th>Mapped once</th>
+<th>Mapped to several places</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>piwiKD1</td>
+<td>76.28%</td>
+<td>22.75%</td>
+</tr>
+<tr>
+<td>piwiKD2</td>
+<td>71.53%</td>
+<td>27.33%</td>
+</tr>
+<tr>
+<td>piwiCT1</td>
+<td>78.26%</td>
+<td>20.94%</td>
+</tr>
+<tr>
+<td>piwiCT2</td>
+<td>80.16%</td>
+<td>18.73%</td>
+</tr>
+</tbody>
+</table>
+<h2 id="3-tetranscripts-about-4-minutes">3. TEtranscripts (about 4
 minutes)</h2>
 <pre><code>TEtranscripts --format BAM --stranded reverse -t STARalignments/piwiKD1_Aligned.out.bam STARalignments/piwiKD2_Aligned.out.bam  -c STARalignments/piwiCT1_Aligned.out.bam STARalignments/piwiCT2_Aligned.out.bam --GTF input_data/dm6.ensGene.gtf --TE input_data/dm6_rmsk_TE.gtf --mode multi --project piwiKD_vs_control --minread 1 -i 10 --padj 0.05</code></pre>
-<p>It took 345 s and 0.76 GB of memory. While it runs, go through Figure
-4 of the handout (the <code>TEtranscripts</code> flow chart).</p>
+<p>It took 250 s and 0.76 GB of memory. It prints
+<code>Could not retrieve index file</code> once for each BAM file; this
+is not an error. While it runs, go through Figure 4 of the handout (the
+<code>TEtranscripts</code> flow chart).</p>
 <h2 id="4-results-each-command-under-1-second">4. Results (each command
 under 1 second)</h2>
 <pre><code>head piwiKD_vs_control.cntTable
@@ -2283,13 +2322,13 @@ ln -s /data/practical4_tetranscripts/results/ results</code></pre>
 <pre><code>cp /data/practical4_tetranscripts/VolcanoPiwi.R .
 Rscript VolcanoPiwi.R</code></pre>
 <p><code>Rscript</code> writes <code>Rplots.pdf</code>, the plot in
-Figure 5 of the handout. In the copy of <code>results/</code> in Google
-Drive, 11 TE families have Padj &lt; 0.05 and |log2FC| &gt; 2: 10 up in
-Piwi-KD and 1 down (<code>Gypsy3_LTR:Gypsy:LTR</code>).</p>
+Figure 5 of the handout. The files in <code>results/</code> on the
+server are the same as the copy in Google Drive (same md5). In them, 11
+TE families have Padj &lt; 0.05 and |log2FC| &gt; 2: 10 up in Piwi-KD
+and 1 down (<code>Gypsy3_LTR:Gypsy:LTR</code>).</p>
 <h2 id="6-clean-up-seconds">6. Clean up (seconds)</h2>
-<p>The four BAM files should take about 400 MB per student (estimated
-from the 2023 handout, not measured).
-<!-- TODO(server, 5 Nov): check the size --> To remove them:</p>
+<p>The four BAM files take 321 MB per student, out of 325 MB for the
+whole <code>practical4</code> directory. To remove them:</p>
 <pre><code>rm STARalignments/*_Aligned.out.bam</code></pre>
 </body>
 </html>

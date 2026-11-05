@@ -2224,10 +2224,8 @@ Expecting `+Qe.join(", ")+", got '"+(this.terminals_[Ne]||Ne)+"'":Dt="Parse erro
 <code>TEtranscripts</code></h1>
 <p><strong>Tutorial Author:</strong> Clément Goubert
 (<code>goubert.clement@gmail.com</code>)</p>
-<p><strong>Last Update</strong>: November 4, 2026
+<p><strong>Last Update</strong>: November 5, 2026
 (<code>TEtranscripts</code> 2.2.4, <code>STAR</code> 2.7.10b)</p>
-<!-- TODO(server, 5 Nov): nobody has run the commands below with /data/practical4_tetranscripts and the shared STAR index yet. Run them on the server, then update the date, the times, and the example outputs marked with TODO. -->
-
 <h2 id="description">Description</h2>
 <p>In this practical session, we will perform a differential expression
 analysis (statistical measurement of change in mRNA levels between
@@ -2315,16 +2313,16 @@ real life!).</p>
 <p>Let&#39;s first look at the input data, located in the shared folder of
 the course server</p>
 <pre><code>tree input_data/</code></pre>
-<!-- TODO(server, 5 Nov): paste the real output of tree here. -->
-
 <pre><code>input_data/
 ├── Control_rep_1.fastq.gz      # --&gt; control RNA-seq reads, replicate 1
 ├── Control_rep_2.fastq.gz      # --&gt; control RNA-seq reads, replicate 2
+├── Piwi_GKD_rep_1.fastq.gz     # --&gt; Piwi KD RNA-seq reads, replicate 1
+├── Piwi_GKD_rep_2.fastq.gz     # --&gt; Piwi KD RNA-seq reads, replicate 2
 ├── dm6.ensGene.gtf             # --&gt; dm6 genes annotation
 ├── dm6.fa                      # --&gt; dm6 reference genome
-├── dm6_rmsk_TE.gtf             # --&gt; dm6 TE annotation
-├── Piwi_GKD_rep_1.fastq.gz     # --&gt; Piwi KD RNA-seq reads, replicate 1
-└── Piwi_GKD_rep_2.fastq.gz     # --&gt; Piwi KD RNA-seq reads, replicate 2</code></pre>
+└── dm6_rmsk_TE.gtf             # --&gt; dm6 TE annotation
+
+1 directory, 7 files</code></pre>
 <blockquote>
 <p>Note: for future use, check details about the <code>gtf</code> files
 required for <code>TEtranscripts</code> <a href="https://hammelllab.labsites.cshl.edu/software/#TEtranscripts">here</a>,
@@ -2357,8 +2355,7 @@ not need the <code>gtf</code> file.</p>
 <pre><code>mkdir STARalignments
 STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Piwi_GKD_rep_1.fastq.gz --readFilesCommand zcat --outSAMtype BAM Unsorted --winAnchorMultimapNmax 200 --outFilterMultimapNmax 100 --outFileNamePrefix STARalignments/piwiKD1_</code></pre>
 <blockquote>
-<p>note: each alignment should take about 1 minute
-<!-- TODO(server, 5 Nov): time and memory per alignment without --sjdbGTFfile --></p>
+<p>note: each alignment should take about 30 seconds</p>
 </blockquote>
 <pre><code>STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Piwi_GKD_rep_2.fastq.gz --readFilesCommand zcat --outSAMtype BAM Unsorted --winAnchorMultimapNmax 200 --outFilterMultimapNmax 100 --outFileNamePrefix STARalignments/piwiKD2_</code></pre>
 <h4 id="122-control-2-replicates">1.2.2 Control (2 replicates)</h4>
@@ -2369,12 +2366,11 @@ STAR --runThreadN 2 --genomeDir Index --readFilesIn input_data/Piwi_GKD_rep_1.fa
 analysis</h3>
 <pre><code>TEtranscripts --format BAM --stranded reverse -t STARalignments/piwiKD1_Aligned.out.bam STARalignments/piwiKD2_Aligned.out.bam  -c STARalignments/piwiCT1_Aligned.out.bam STARalignments/piwiCT2_Aligned.out.bam --GTF input_data/dm6.ensGene.gtf --TE input_data/dm6_rmsk_TE.gtf --mode multi --project piwiKD_vs_control --minread 1 -i 10 --padj 0.05</code></pre>
 <blockquote>
-<p>The message:
-<code>Could not retrieve index file for &#39;STARalignments/piwiKD1_Aligned.out.bam&#39;</code>
-will appear. It is not an error, <code>TEtranscripts</code> will
-actually generate the index for each alignment automatically.
-<code>TEtranscripts</code> should take about 6 minutes to run.
-<!-- TODO(server, 5 Nov): check the message and the time --></p>
+<p><code>TEtranscripts</code> prints the message
+<code>[E::idx_find_and_load] Could not retrieve index file for &#39;STARalignments/piwiKD1_Aligned.out.bam&#39;</code>
+once for each BAM file. It reads the BAM files without an index, so you
+can ignore the message. <code>TEtranscripts</code> should take about 4
+minutes to run.</p>
 </blockquote>
 <p>While <code>TEtranscripts</code> is running, you can look into the
 detailed workflow. You will see that the program alternated between
@@ -2388,15 +2384,18 @@ Expectation/Maximization step attributing reads to TE loci.</p>
 </blockquote>
 <h3 id="results">Results</h3>
 <p>After a successful run, 4 files will be generated:</p>
-<!-- TODO(server, 5 Nov): the four example outputs below come from the 2023 handout. Replace them with the output of the 5 Nov run; the first line of the cntTable is a header (gene/TE, then one column per BAM file). -->
-
 <ul>
 <li><p><code>piwiKD_vs_control.cntTable</code>: this is the read counts
-out of <code>TEtranscripts</code>, for both genes and TEs. The first
-column indicate gene or TE family name, and each next column correspond
-to the read count for each condition.</p>
+out of <code>TEtranscripts</code>, for both genes and TEs.
+<code>TEtranscripts</code> writes the column names on the first line,
+<code>gene/TE</code> and then the BAM files, with <code>.T</code> added
+to the treatment (<code>-t</code>) files and <code>.C</code> to the
+control (<code>-c</code>) files. In the next lines, the first column is
+the gene or TE family name, and each next column is the read count in
+one BAM file.</p>
 <pre><code>head piwiKD_vs_control.cntTable</code></pre>
-<pre><code>&quot;FBgn0000003&quot;   9067    0   15412   5975
+<pre><code>gene/TE STARalignments/piwiKD1_Aligned.out.bam.T    STARalignments/piwiKD2_Aligned.out.bam.T    STARalignments/piwiCT1_Aligned.out.bam.C    STARalignments/piwiCT2_Aligned.out.bam.C
+&quot;FBgn0000003&quot;   9067    0   15412   5975
 &quot;FBgn0000008&quot;   32  28  47  59
 &quot;FBgn0000014&quot;   80  75  25  19
 &quot;FBgn0000015&quot;   8   5   1   2
@@ -2425,26 +2424,26 @@ main result table from the differential expression analysis with
 <code>DESeq2</code>.</p>
 <pre><code>head piwiKD_vs_control_gene_TE_analysis.txt</code></pre>
 <pre><code>baseMean    log2FoldChange  lfcSE   stat    pvalue  padj
-FBgn0000003 7496.32149464016    -1.31624683855759   3.91511703871456    -0.336196038468815  0.736723040072146   0.90321224259372
-FBgn0000008 41.2452052205847    -0.846404602618286  0.468447081016323   -1.80683077538227   0.0707886686420089  0.243117726171184
-FBgn0000014 49.1262294684561    1.79266376608722    0.453418090720179   3.95366616986955    7.69627701796716e-05    0.00110998817889254
-FBgn0000015 3.92336261262419    2.08258292784614    1.4980808020054 1.39016728941343    0.164478083890275   0.421438277712362
-FBgn0000017 157.361890606094    0.429714476761589   0.309100895585062   1.39020780236897    0.16446578486819    0.421438277712362
-FBgn0000018 25.7681516759187    -0.250195946949605  0.565873845705727   -0.442140856744446  0.65838728075958    0.865750510693057
-FBgn0000024 4.70352527222641    1.88724067149184    1.34287753608743    1.40537064682044    0.159911090558418   0.415032094465402
-FBgn0000032 50.7878534373474    -0.532402717165373  0.432720270103867   -1.23036232399647   0.2185614553133 0.503891826335278
-FBgn0000042 968.914785124894    0.248341515484232   0.198409438947303   1.25166179997208    0.210693125186219   0.493176903629541</code></pre>
+FBgn0000003 7496.95757369845    -1.31588110563333   3.91517818121716    -0.336097374047033  0.736797438570344   0.902931518055443
+FBgn0000008 41.2458985575463    -0.846114063691264  0.467066243124928   -1.81155045166677   0.0700556868130839  0.241023513710386
+FBgn0000014 49.1313822401896    1.7929156372435 0.452335730143835   3.96368342751386    7.38021080032262e-05    0.00106796762682466
+FBgn0000015 3.92383069032185    2.0829306438596 1.49150705492375    1.39652751690543    0.162555700265905   0.417269675434786
+FBgn0000017 157.368973080098    0.429978356404668   0.309421779996998   1.38961890920814    0.164644630647959   0.420488967363299
+FBgn0000018 25.7694398739735    -0.249911503927691  0.563685400677301   -0.443352805709368  0.657510566365039   0.864827023599609
+FBgn0000024 4.70396606917908    1.88748067967958    1.33686327312379    1.41187264069959    0.157987464852245   0.411090346902346
+FBgn0000032 50.7888758887039    -0.532154144950741  0.431633506310109   -1.23288423435879   0.217618958246636   0.501856114045118
+FBgn0000042 968.973315255412    0.248614008243223   0.200030390371073   1.24288118311434    0.213911620665748   0.496931272758441</code></pre>
 <pre><code>tail piwiKD_vs_control_gene_TE_analysis.txt</code></pre>
-<pre><code>TRANSPAC_I-int:Gypsy:LTR    116.414503755064    2.06051339821219    0.331614247696445   6.21358525010769    5.17891139816696e-10    3.41974291063766e-08
-TRANSPAC_LTR:Gypsy:LTR  12.108452499695 1.76594902622038    0.853463486837924   2.06915591991312    0.0385314576487211  0.159105911832808
-TV1I:Gypsy:LTR  6.23043397426447    0.102040532049877   1.10622965622402    0.0922417252835001  0.926505987354992   0.975080697666644
-Transib-N1_DM:CMC-Transib:DNA   1.98525372581525    -0.0227181921579707 1.91002621820881    -0.0118941781748291 0.990510042631103   NA
-Transib5:CMC-Transib:DNA    10.1709658430894    -0.236336499485258  0.871958330375934   -0.271041047779616  0.786359461879388   0.928960553907422
-Ulysses_I-int:Gypsy:LTR 2.00205880394992    2.80416164448381    2.28677817067709    1.2262499618201 0.220104625120975   NA
-XDMR:XDMR:Unknown   2.01165924819134    -1.57586245854514   2.07183136671284    -0.760613283428274  0.446888083329893   NA
-XDMR_DM:XDMR_DM:Unknown 0.966253597048695   3.39638119897609    2.9987731534211 1.13259023781155    0.257386370097645   NA
-ZAM_I-int:Gypsy:LTR 6.69641232303531    0.745381479347682   1.07298376376424    0.694681042267348   0.48725521121973    0.764045968153913
-ZAM_LTR:Gypsy:LTR   3.5121624278533 -2.5835928062637    1.6998712045284 -1.51987562315375   0.128542238135249   0.362461822414429</code></pre>
+<pre><code>TRANSPAC_I-int:Gypsy:LTR    116.426050473781    2.06078095694532    0.331629170735864   6.21411244485091    5.16155578471022e-10    3.50426624816952e-08
+TRANSPAC_LTR:Gypsy:LTR  12.1095419528461    1.76623368239437    0.849805377205591   2.07839786587638    0.0376727291224817  0.156511843019305
+TV1I:Gypsy:LTR  6.23072662936149    0.102213533552676   1.10071009655522    0.0928614481438518  0.92601363328503    0.974867498620109
+Transib-N1_DM:CMC-Transib:DNA   1.98528756375055    -0.0223984610856636 1.90043922606137    -0.0117859391547522 0.990596398820838   NA
+Transib5:CMC-Transib:DNA    10.1712918148752    -0.23604054717197   0.86777359351202    -0.272007063751129  0.78561658797219    0.92853885713179
+Ulysses_I-int:Gypsy:LTR 2.00223081782135    2.80426441522326    2.27755371421552    1.23126159340183    0.21822504139964    NA
+XDMR:XDMR:Unknown   2.01154637645356    -1.57585504037125   2.06147233134796    -0.764431817205533  0.444609954097204   NA
+XDMR_DM:XDMR_DM:Unknown 0.966447687607186   3.3967698641132 2.98207321047951    1.13906320347078    0.254676793573656   NA
+ZAM_I-int:Gypsy:LTR 6.69679800635913    0.745646271117691   1.06771550749756    0.698356693221853   0.484954152480517   0.761403253085136
+ZAM_LTR:Gypsy:LTR   3.51204812393295    -2.58361615300062   1.69247114490964    -1.52653483090168   0.126876722901108   0.358559982440447</code></pre>
 <blockquote>
 <p>REMINDER: with <code>TEtranscripts</code>, the results are given at
 the TE family level</p>
